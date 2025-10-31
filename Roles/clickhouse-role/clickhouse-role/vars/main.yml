@@ -1,0 +1,10 @@
+---
+clickhouse_apt_package:
+  - "clickhouse-client={{ clickhouse_version }}"
+  - "clickhouse-common-static={{ clickhouse_version }}"
+  - "clickhouse-server={{ clickhouse_version }}"
+
+clickhouse_gpg_key_url: "https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key"
+clickhouse_repo_url: "https://packages.clickhouse.com/deb lts main"
+clickhouse_gpg_key: "/usr/share/keyrings/clickhouse-keyring.gpg"
+clickhouse_repo: "deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg arch={{ ansible_architecture }}] https://packages.clickhouse.com/deb lts main"

@@ -1,0 +1,6 @@
+---
+- name: Установка и настройка Nginx с Lighthouse
+  hosts: vector
+  become: true
+  roles:
+    - vector-role

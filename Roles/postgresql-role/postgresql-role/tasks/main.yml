@@ -1,0 +1,108 @@
+---
+- name: Install required packages
+  apt:
+    name:
+      - curl
+      - ca-certificates
+      - software-properties-common
+      - lsb-release
+    state: present
+    update_cache: true
+
+- name: Create PGDG directory
+  file:
+    path: /usr/share/postgresql-common/pgdg
+    state: directory
+    mode: '0755'
+
+- name: Download PostgreSQL signing key
+  get_url:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    dest: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+    mode: '0644'
+
+- name: Add PostgreSQL repository
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    filename: pgdg.list
+    state: present
+    update_cache: true
+
+- name: Install PostgreSQL
+  apt:
+    name: "postgresql-{{ postgresql_version }}"
+    state: present
+    update_cache: true
+
+- name: Download pgAdmin4 signing key
+  shell: |
+    curl -fsS https://www.pgadmin.org/static/packages_pgadmin_org.pub | gpg --dearmor -o /usr/share/keyrings/packages-pgadmin-org.gpg
+  args:
+    creates: /usr/share/keyrings/packages-pgadmin-org.gpg
+
+- name: Add pgAdmin4 repository
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/packages-pgadmin-org.gpg] https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/{{ ansible_distribution_release }} pgadmin4 main"
+    filename: pgadmin4.list
+    state: present
+    update_cache: true
+
+- name: Install pgAdmin4 web
+  apt:
+    name: pgadmin4-web
+    state: present
+    update_cache: true
+
+- name: Setup pgAdmin4 web (non-interactive)
+  command: /usr/pgadmin4/bin/setup-web.sh --yes
+  args:
+    creates: /etc/apache2/conf-available/pgadmin4.conf
+  register: setup_web
+  changed_when: "'Done' in setup_web.stdout"
+
+- name: Create pgAdmin config directory
+  file:
+    path: /var/lib/pgadmin
+    state: directory
+    mode: '0755'
+    owner: pgadmin
+    group: pgadmin
+
+- name: Create pgAdmin config file
+  copy:
+    dest: /var/lib/pgadmin/config_local.py
+    content: |
+      SERVER_MODE = True
+      DEFAULT_SERVER = '0.0.0.0'
+      LOG_FILE = '/var/log/pgadmin/pgadmin4.log'
+      SQLITE_PATH = '/var/lib/pgadmin/pgadmin4.db'
+      SESSION_DB_PATH = '/var/lib/pgadmin/sessions'
+      STORAGE_DIR = '/var/lib/pgadmin/storage'
+    owner: pgadmin
+    group: pgadmin
+    mode: '0640'
+
+- name: Create initial admin user for pgAdmin
+  command: >
+    /usr/pgadmin4/bin/pgadmin4-setup.py
+    --user {{ pgadmin_email }}
+    --password {{ pgadmin_password }}
+    --load-servers /tmp/servers.json
+  args:
+    creates: /var/lib/pgadmin/pgadmin4.db
+  environment:
+    PYTHONPATH: /usr/pgadmin4/web
+
+- name: Ensure permissions for pgAdmin files
+  file:
+    path: /var/lib/pgadmin
+    state: directory
+    recurse: true
+    owner: pgadmin
+    group: pgadmin
+    mode: '0750'
+
+- name: Restart Apache service
+  service:
+    name: apache2
+    state: restarted

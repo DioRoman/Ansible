@@ -1,0 +1,6 @@
+---
+- name: Установка и настройка Nginx с Lighthouse
+  hosts: lighthouse
+  become: true
+  roles:
+    - lighthouse-role

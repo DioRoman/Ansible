@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: "Roman Lystsev" 
+  description: "Роль для установки LightHouse"  
+  license: "MIT"
+  min_ansible_version: "2.9"  
+  platforms:
+    - name: "Ubuntu"
+      versions:
+        - "20.04"
+        - "22.04"
+        - "24.04"
+  galaxy_tags:  # Теги для поиска в Ansible Galaxy
+    - lighthouse
+    - web interface
+    - analytics

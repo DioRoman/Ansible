@@ -1,0 +1,72 @@
+---
+- name: Установка зависимостей
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+    update_cache: true
+
+- name: Ensure GPG directory exists
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Добавление GPG-ключа
+  ansible.builtin.apt_key:
+    url: "https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key"
+    keyring: /usr/share/keyrings/clickhouse-keyring.gpg
+
+- name: Verify GPG key permissions
+  ansible.builtin.file:
+    path: /usr/share/keyrings/clickhouse-keyring.gpg
+    mode: "0644"
+
+- name: Ensure directory exists
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d
+    state: directory
+    mode: "0755"
+
+- name: Add ClickHouse repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/clickhouse.list
+    content: |
+      deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main
+    mode: "0644"
+
+- name: Update apt package cache
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install ClickHouse packages
+  ansible.builtin.apt:
+    name:
+      - "clickhouse-server={{ clickhouse_version }}"
+      - "clickhouse-client={{ clickhouse_version }}"
+      - "clickhouse-common-static={{ clickhouse_version }}"
+    state: present
+    allow_downgrade: true
+
+- name: Ensure ClickHouse service is running and enabled
+  ansible.builtin.service:
+    name: clickhouse-server
+    state: started
+    enabled: true
+
+- name: Get ClickHouse version
+  ansible.builtin.command: clickhouse-client --query "SELECT version()"
+  register: ch_version
+  changed_when: false
+
+- name: Show installed version
+  ansible.builtin.debug:
+    msg: "Установлена версия ClickHouse: {{ ch_version.stdout }}"
+
+- name: Create database
+  ansible.builtin.command: "clickhouse-client -q 'create database logs;'"
+  register: create_db
+  failed_when: create_db.rc != 0 and create_db.rc != 82
+  changed_when: create_db.rc == 0

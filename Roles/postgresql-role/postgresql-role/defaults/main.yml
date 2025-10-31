@@ -1,0 +1,5 @@
+---
+# defaults file for postgresql-role
+postgresql_version: "17.5" 
+pgadmin_email: "admin@example.com"  # Email для учетной записи pgAdmin
+pgadmin_password: "securepassword" 
